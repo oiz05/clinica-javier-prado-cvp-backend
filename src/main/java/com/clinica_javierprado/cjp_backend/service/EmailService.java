@@ -1,5 +1,7 @@
 package com.clinica_javierprado.cjp_backend.service;
 
+import com.clinica_javierprado.cjp_backend.domain.AppointmentStatus;
+import com.clinica_javierprado.cjp_backend.event.AppointmentNotificationEvent;
 import com.clinica_javierprado.cjp_backend.exception.EmailDeliveryException;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
@@ -9,9 +11,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+
+    private static final DateTimeFormatter APPOINTMENT_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Value("${app.resend.api-key}")
     private String resendApiKey;
@@ -27,6 +34,9 @@ public class EmailService {
 
     @Value("${app.mail.welcome-subject}")
     private String welcomeSubject;
+
+    @Value("${app.mail.appointment-subject}")
+    private String appointmentSubject;
 
     @Value("${app.password-reset.frontend-base-url}")
     private String frontendBaseUrl;
@@ -85,6 +95,41 @@ public class EmailService {
         sendEmail(to, welcomeSubject, html);
     }
 
+    public void sendAppointmentNotificationEmail(AppointmentNotificationEvent event) {
+        String statusLine = buildStatusLine(event.previousStatus(), event.currentStatus());
+        String previousDateLine = buildPreviousDateLine(event.previousAppointmentDate());
+        String html = """
+                <p>Hola, %s.</p>
+                <p>%s</p>
+                <ul>
+                    <li><strong>Fecha y hora:</strong> %s</li>
+                    <li><strong>Doctor:</strong> %s</li>
+                    <li><strong>Especialidad:</strong> %s</li>
+                    <li><strong>Tipo de cita:</strong> %s</li>
+                    <li><strong>Clinica:</strong> %s</li>
+                    <li><strong>Direccion:</strong> %s</li>
+                    <li><strong>Estado:</strong> %s</li>
+                </ul>
+                %s
+                %s
+                <p>Gracias por confiar en Clinica Javier Prado.</p>
+                """.formatted(
+                escapeHtml(event.patientFirstName()),
+                escapeHtml(buildAppointmentMessage(event)),
+                escapeHtml(formatDateTime(event.appointmentDate())),
+                escapeHtml(event.doctorName()),
+                escapeHtml(event.medicalSpecialty()),
+                escapeHtml(event.appointmentTypeName()),
+                escapeHtml(event.clinicName()),
+                escapeHtml(event.clinicAddress()),
+                escapeHtml(statusLabel(event.currentStatus())),
+                previousDateLine,
+                statusLine
+        );
+
+        sendEmail(event.patientEmail(), appointmentSubject, html);
+    }
+
     private void sendEmail(String to, String subject, String html) {
         CreateEmailOptions params = CreateEmailOptions.builder()
                 .from(buildSender())
@@ -109,6 +154,55 @@ public class EmailService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String buildAppointmentMessage(AppointmentNotificationEvent event) {
+        return switch (event.type()) {
+            case CREATED -> "Tu cita fue registrada correctamente.";
+            case RESCHEDULED -> "Tu cita fue reprogramada correctamente.";
+            case STATUS_CHANGED -> "El estado de tu cita fue actualizado.";
+        };
+    }
+
+    private String buildPreviousDateLine(LocalDateTime previousAppointmentDate) {
+        if (previousAppointmentDate == null) {
+            return "";
+        }
+
+        return "<p><strong>Fecha anterior:</strong> " + escapeHtml(formatDateTime(previousAppointmentDate)) + "</p>";
+    }
+
+    private String buildStatusLine(AppointmentStatus previousStatus, AppointmentStatus currentStatus) {
+        if (previousStatus == null || previousStatus == currentStatus) {
+            return "";
+        }
+
+        return "<p><strong>Cambio de estado:</strong> "
+                + escapeHtml(statusLabel(previousStatus))
+                + " -> "
+                + escapeHtml(statusLabel(currentStatus))
+                + "</p>";
+    }
+
+    private String statusLabel(AppointmentStatus status) {
+        if (status == null) {
+            return "No definido";
+        }
+
+        return switch (status) {
+            case PENDING -> "Pendiente";
+            case CONFIRMED -> "Confirmada";
+            case CANCELLED -> "Cancelada";
+            case COMPLETED -> "Completada";
+        };
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.format(APPOINTMENT_DATE_FORMATTER);
     }
 
     private String escapeHtml(String value) {

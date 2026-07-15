@@ -1,12 +1,11 @@
 # Authentication Context Walkthrough
 
-The Authentication Context implementation is complete! Based on your decisions, the system now uses MySQL, AWS S3 for profile photo storage, and Resend for email notifications. 
+The Authentication Context implementation is complete! The system uses database-backed users, JWT authentication, and Resend for email notifications.
 
 ## Changes Made
 
 ### 1. Dependencies and Configuration
 - **Database**: Replaced `mssql-jdbc` with `mysql-connector-j` in `pom.xml`.
-- **AWS S3**: Added `aws-java-sdk-s3` for handling profile photo uploads.
 - **Other Dependencies**: Added `spring-boot-starter-validation`, `spring-boot-starter-mail`, and JJWT dependencies for authentication.
 - **Environment**: Replaced `application.properties` with `application.yml` mapped to environment variables. Also created an `.env.example` file for reference.
 
@@ -22,7 +21,6 @@ The Authentication Context implementation is complete! Based on your decisions, 
 ### 4. Service Layer
 - **`AuthService`**: Handles user registration, authentication (login), and password recovery logic (forgot and reset password).
 - **`UserService`**: Handles profile updating, which also encapsulates role-based logic (saving medical specialties and CMP for doctors).
-- **`FileStorageService`**: Configured to upload files directly to an AWS S3 bucket using the credentials defined in the environment.
 - **`EmailService`**: Sends reset password links via Resend's SMTP server using Spring's `JavaMailSender`.
 
 ### 5. Controllers & DTOs

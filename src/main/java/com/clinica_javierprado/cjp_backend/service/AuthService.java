@@ -84,6 +84,7 @@ public class AuthService {
         }
 
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            System.out.println("Email not verified for user: " + user.getEmail());
             throw new EmailNotVerifiedException(user.getEmail());
         }
 

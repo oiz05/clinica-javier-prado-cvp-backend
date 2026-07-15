@@ -1,6 +1,6 @@
 # Javier Prado Clinic Backend
 
-Backend de la Clinica Javier Prado construido con Java 21 y Spring Boot. En su estado actual se enfoca en autenticacion con JWT, registro de usuarios, recuperacion de contrasena, consulta y edicion de perfil, carga de foto de perfil y health check.
+Backend de la Clinica Javier Prado construido con Java 21 y Spring Boot. En su estado actual se enfoca en autenticacion con JWT, registro de usuarios, recuperacion de contrasena, consulta y edicion de perfil y health check.
 
 ## Estado actual
 
@@ -8,7 +8,7 @@ Backend de la Clinica Javier Prado construido con Java 21 y Spring Boot. En su e
 - Inicio de sesion con JWT
 - Recuperacion y reseteo de contrasena por correo
 - Consulta de perfil autenticado
-- Actualizacion de perfil con soporte para foto en S3
+- Actualizacion de datos de perfil
 - Health check para monitoreo basico
 - Integracion parcial con el frontend actual
 
@@ -24,7 +24,6 @@ El modulo de citas todavia no esta implementado en la capa API, pero ya existen 
 - Java Mail
 - JWT (`jjwt`)
 - PostgreSQL
-- AWS S3 SDK
 - Maven
 - Docker
 
@@ -61,7 +60,6 @@ Contiene la logica de negocio principal:
 - `AuthService`
 - `UserService`
 - `EmailService`
-- `FileStorageService`
 
 ### `security`
 
@@ -124,11 +122,12 @@ GET /api/health
 
 - `GET /api/users/me` devuelve el perfil autenticado
 - `PUT /api/users/profile` actualiza perfil y admite `multipart/form-data`
+- El campo opcional `photo` se acepta por compatibilidad, pero actualmente se ignora.
 - El `PUT` espera:
 
 ```text
 data: EditProfileRequest
-photo: MultipartFile opcional
+photo: MultipartFile opcional, no procesado actualmente
 ```
 
 No existe un endpoint separado `POST /api/users/profile-photo`.
@@ -169,13 +168,6 @@ Variables usadas realmente por el codigo:
 - `MAIL_FROM`
 - `MAIL_RESET_SUBJECT`
 
-### AWS S3
-
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `AWS_S3_BUCKET`
-
 ### CORS
 
 - `CORS_ALLOWED_ORIGINS`
@@ -198,7 +190,7 @@ Referencia: `.env.example`
 
 ## Configuracion actual relevante
 
-- `application.yml` exige variables sensibles para base de datos, JWT, mail y S3
+- `application.yml` exige variables sensibles para base de datos, JWT y mail
 - `application-docker.yml` activa la siembra de doctores base para el perfil `docker`
 - `spring.jpa.hibernate.ddl-auto` se controla con `JPA_DDL_AUTO` y por defecto esta en `update`
 - `spring.jpa.show-sql` se controla con `JPA_SHOW_SQL` y por defecto esta en `false`
@@ -225,7 +217,7 @@ La ruta soportada para ejecutar en Docker es `docker compose`, no `docker run` d
 
 1. Crea `.env` usando `.env.example` como plantilla.
 2. Configura una instancia PostgreSQL compatible con `DB_URL`; Supabase es la opcion principal esperada.
-3. Ajusta credenciales JWT, correo y S3 segun tu entorno.
+3. Ajusta credenciales JWT y correo segun tu entorno.
 
 ### Ejecutar con Maven Wrapper
 

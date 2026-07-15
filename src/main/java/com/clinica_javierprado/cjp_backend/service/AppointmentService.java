@@ -14,6 +14,8 @@ import com.clinica_javierprado.cjp_backend.dto.AppointmentResponse;
 import com.clinica_javierprado.cjp_backend.dto.AvailabilitySlotResponse;
 import com.clinica_javierprado.cjp_backend.dto.CreateAppointmentRequest;
 import com.clinica_javierprado.cjp_backend.dto.RescheduleAppointmentRequest;
+import com.clinica_javierprado.cjp_backend.event.AppointmentNotificationEvent;
+import com.clinica_javierprado.cjp_backend.event.AppointmentNotificationEvent.NotificationType;
 import com.clinica_javierprado.cjp_backend.repository.AppointmentRepository;
 import com.clinica_javierprado.cjp_backend.repository.AppointmentTypeRepository;
 import com.clinica_javierprado.cjp_backend.repository.ClinicRepository;
@@ -21,6 +23,7 @@ import com.clinica_javierprado.cjp_backend.repository.DoctorClinicRepository;
 import com.clinica_javierprado.cjp_backend.repository.DoctorProfileRepository;
 import com.clinica_javierprado.cjp_backend.repository.DoctorScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +47,7 @@ public class AppointmentService {
     private final DoctorClinicRepository doctorClinicRepository;
     private final DoctorScheduleRepository doctorScheduleRepository;
     private final PricingService pricingService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getMyAppointments(User user) {
@@ -112,7 +116,9 @@ public class AppointmentService {
                 .price(price.getPrice())
                 .build();
 
-        return toAppointmentResponse(appointmentRepository.save(appointment));
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        publishAppointmentNotification(savedAppointment, NotificationType.CREATED, null, null);
+        return toAppointmentResponse(savedAppointment);
     }
 
     @Transactional
@@ -122,8 +128,13 @@ public class AppointmentService {
         if (status == AppointmentStatus.COMPLETED) {
             throw new IllegalArgumentException("Patients cannot mark appointments as completed.");
         }
+        AppointmentStatus previousStatus = appointment.getStatus();
         appointment.setStatus(status);
-        return toAppointmentResponse(appointmentRepository.save(appointment));
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        if (previousStatus != status) {
+            publishAppointmentNotification(savedAppointment, NotificationType.STATUS_CHANGED, previousStatus, null);
+        }
+        return toAppointmentResponse(savedAppointment);
     }
 
     @Transactional
@@ -133,6 +144,8 @@ public class AppointmentService {
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new IllegalArgumentException("Cancelled appointments cannot be rescheduled.");
         }
+        AppointmentStatus previousStatus = appointment.getStatus();
+        LocalDateTime previousAppointmentDate = appointment.getAppointmentDate();
         validateSlotAvailable(
                 appointment.getDoctorProfile().getId(),
                 appointment.getClinic().getId(),
@@ -142,7 +155,9 @@ public class AppointmentService {
         );
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setStatus(AppointmentStatus.PENDING);
-        return toAppointmentResponse(appointmentRepository.save(appointment));
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        publishAppointmentNotification(savedAppointment, NotificationType.RESCHEDULED, previousStatus, previousAppointmentDate);
+        return toAppointmentResponse(savedAppointment);
     }
 
     private List<AvailabilitySlotResponse> buildSlots(
@@ -270,6 +285,30 @@ public class AppointmentService {
         if (user.getRole() != Role.PATIENT) {
             throw new IllegalArgumentException("Only patients can manage appointments.");
         }
+    }
+
+    private void publishAppointmentNotification(
+            Appointment appointment,
+            NotificationType type,
+            AppointmentStatus previousStatus,
+            LocalDateTime previousAppointmentDate
+    ) {
+        String doctorName = appointment.getDoctorProfile().getUser().getFirstName() + " " + appointment.getDoctorProfile().getUser().getLastName();
+        eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                appointment.getId(),
+                type,
+                appointment.getPatient().getEmail(),
+                appointment.getPatient().getFirstName(),
+                previousStatus,
+                appointment.getStatus(),
+                previousAppointmentDate,
+                appointment.getAppointmentDate(),
+                doctorName,
+                appointment.getDoctorProfile().getMedicalSpecialty(),
+                appointment.getClinic().getName(),
+                appointment.getClinic().getAddress(),
+                appointment.getAppointmentType().getName()
+        ));
     }
 
     private AppointmentResponse toAppointmentResponse(Appointment appointment) {

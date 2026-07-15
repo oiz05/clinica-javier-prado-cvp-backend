@@ -10,9 +10,6 @@ import com.clinica_javierprado.cjp_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -20,10 +17,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final DoctorProfileRepository doctorProfileRepository;
-    private final FileStorageService fileStorageService;
 
     @Transactional
-    public UserProfileResponse updateProfile(User authenticatedUser, EditProfileRequest request, MultipartFile profilePhoto) throws IOException {
+    public UserProfileResponse updateProfile(User authenticatedUser, EditProfileRequest request) {
         User user = userRepository.findById(authenticatedUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -36,11 +32,6 @@ public class UserService {
 
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
-        }
-
-        if (profilePhoto != null && !profilePhoto.isEmpty()) {
-            String photoUrl = fileStorageService.uploadFile(profilePhoto);
-            user.setProfilePhoto(photoUrl);
         }
 
         userRepository.save(user);

@@ -5,7 +5,7 @@ This plan details the implementation of the authentication context for the CJP B
 ## User Decisions
 
 - **Database**: Use `mysql-connector-j` instead of `mssql-jdbc`.
-- **Profile Photo Upload**: Integrate with AWS S3 for profile photo uploads instead of local storage.
+- **Profile Photo Upload**: Not implemented; uploaded files are not stored by the backend.
 - **Email Service**: Use Resend as the SMTP provider.
 - **Configuration**: Use `application.yml` for configuration.
 
@@ -82,11 +82,8 @@ This plan details the implementation of the authentication context for the CJP B
 - Uses `JavaMailSender` to send the password reset email via Resend SMTP. Includes the configurable reset link.
 
 #### [NEW] `AuthenticationContext/service/UserService.java`
-- **Edit Profile**: Updates `phone_number`, `email`, and handles file upload for `profile_photo`.
+- **Edit Profile**: Updates `phone_number` and `email`.
 - Updates `medical_specialty` and `cmp` if the authenticated user has the `DOCTOR` role.
-
-#### [NEW] `AuthenticationContext/service/FileStorageService.java`
-- Service to handle `MultipartFile` and upload to AWS S3 bucket, returning the S3 URL.
 
 ---
 

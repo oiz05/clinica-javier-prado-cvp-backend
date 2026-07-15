@@ -1,7 +1,7 @@
 - [x] **Dependencies & Configuration**
-  - [x] Add `mysql-connector-j`, `spring-boot-starter-validation`, `spring-boot-starter-mail`, `jjwt`, `aws-java-sdk-s3` dependencies in `pom.xml`
+  - [x] Add `mysql-connector-j`, `spring-boot-starter-validation`, `spring-boot-starter-mail`, and `jjwt` dependencies in `pom.xml`
   - [x] Remove `mssql-jdbc` from `pom.xml`
-  - [x] Create `.env.example` and setup `application.yml` for MySQL, JWT, Resend SMTP, and AWS S3 properties
+  - [x] Create `.env.example` and setup `application.yml` for database, JWT, and Resend properties
 
 - [x] **Domain Entities**
   - [x] Create `Role` enum (`PATIENT`, `DOCTOR`, `ADMINISTRATOR`)
@@ -21,10 +21,9 @@
   - [x] Create `SecurityConfig` (SecurityFilterChain, BCrypt, endpoints access)
 
 - [x] **Service Layer**
-  - [x] Create `FileStorageService` (AWS S3 upload for `profilePhoto`)
   - [x] Create `EmailService` (Resend SMTP for password recovery links)
   - [x] Create `AuthService` (Register, Login, ForgotPassword, ResetPassword)
-  - [x] Create `UserService` (EditProfile handling unique email logic and profile photo upload)
+  - [x] Create `UserService` (EditProfile handling unique email logic)
 
 - [x] **Controllers & DTOs**
   - [x] Create Auth DTOs (`RegisterRequest`, `LoginRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `AuthResponse`)
@@ -33,4 +32,4 @@
   - [x] Create `UserController` (`/api/users/profile`)
 
 - [x] **Verification**
-  - [x] Run application and verify all endpoints work correctly (MySQL, S3, JWT, Resend)
+  - [x] Run application and verify all endpoints work correctly (database, JWT, Resend)
